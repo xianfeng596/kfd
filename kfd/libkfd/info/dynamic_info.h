@@ -32,7 +32,7 @@ struct dynamic_info {
 const struct dynamic_info kern_versions[] = {
     // iOS 15.7.6 - iPhone 6s
     {
-        .kern_version = "Darwin Kernel Version 22.5.0: Mon Apr 24 21:09:28 PDT 2023; root:xnu-8796.122.4~1/RELEASE_ARM64_T8120",
+        .kern_version = "Darwin Kernel Version 21.6.0: Mon Apr 24 22:03:46 PDT 2023; root:xnu-8020.241.30~1/RELEASE_ARM64_S8000",
         .kread_kqueue_workloop_ctl_supported = false,
         .perf_supported = true,
         .proc__p_list__le_prev = 0x0008,
