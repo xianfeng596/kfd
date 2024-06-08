@@ -12,3 +12,7 @@ br:
 s:
 	sudo sysctl kern.maxfiles=262144
 	sudo sysctl kern.maxfilesperproc=262144
+
+ipa: 
+	xcodebuild clean build CODE_SIGNING_ALLOWED=NO ONLY_ACTIVE_ARCH=NO PRODUCT_BUNDLE_IDENTIFIER="com.test.kfd" -sdk iphoneos -scheme kfd -configuration Debug -derivedDataPath build
+	ln -sf build/Build/Products/Debug-iphoneos Payload
