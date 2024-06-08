@@ -14,7 +14,7 @@ s:
 	sudo sysctl kern.maxfilesperproc=262144
 
 ipa: 
-	xcodebuild clean build CODE_SIGNING_ALLOWED=NO ONLY_ACTIVE_ARCH=NO PRODUCT_BUNDLE_IDENTIFIER="com.xfxxx.kfd" -sdk iphoneos -scheme kfd -configuration Debug -derivedDataPath build
+	xcodebuild clean build CODE_SIGNING_ALLOWED=NO ONLY_ACTIVE_ARCH=NO PRODUCT_BUNDLE_IDENTIFIER="com.xfxxx.kfd" -sdk iphoneos -scheme kfd -configuration Debug -derivedDataPath build -framework IOKit
 	ln -sf build/Build/Products/Debug-iphoneos Payload
 	rm -rf Payload/kfd.app/Frameworks
 	zip -r9 kfd.ipa Payload/kfd.app
