@@ -57,7 +57,7 @@ struct dynamic_info {
     u64 device__ARM_TT_L1_INDEX_MASK;
 };
 
-struct dynamic_info dynamic_system_info = {
+const struct dynamic_info kern_versions[] = {
     // iOS 15.7.6 - iPhone 6s
     {
         .kread_kqueue_workloop_ctl_supported = false,
@@ -97,6 +97,8 @@ struct dynamic_info dynamic_system_info = {
         .device__ARM_TT_L1_INDEX_MASK = 0x0000007000000000,
     },
 };
+
+struct dynamic_info dynamic_system_info = { 0 };
 
 #define ARM64_LINK_ADDR dynamic_info(kernelcache__static_base)
 
