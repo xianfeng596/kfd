@@ -11,7 +11,9 @@
 /*
  * Note that these macros assume that the kfd pointer is in scope.
  */
-#define dynamic_info(field_name)    (kern_versions[kfd->info.env.vid].field_name)
+#define dynamic_info(field_name)    (dynamic_system_info.field_name)
+#define T1SZ_BOOT dynamic_info(device__T1SZ_BOOT)
+#define ARM_16K_TT_L1_INDEX_MASK dynamic_info(device__ARM_TT_L1_INDEX_MASK)
 
 #define dynamic_kget(field_name, object_kaddr)                                    \
     ({                                                                            \
@@ -84,51 +86,6 @@ void info_init(struct kfd* kfd)
 
     struct rlimit rlim = { .rlim_cur = kfd->info.env.maxfilesperproc, .rlim_max = kfd->info.env.maxfilesperproc };
     assert_bsd(setrlimit(RLIMIT_NOFILE, &rlim));
-
-    char kern_version[512] = {};
-    usize size2 = sizeof(kern_version);
-    assert_bsd(sysctlbyname("kern.version", &kern_version, &size2, NULL, 0));
-    print_string(kern_version);
-
-    const u64 number_of_kern_versions = sizeof(kern_versions) / sizeof(kern_versions[0]);
-    for (u64 i = 0; i < number_of_kern_versions; i++) {
-        const char* current_kern_version = kern_versions[i].kern_version;
-        if (!memcmp(kern_version, current_kern_version, strlen(current_kern_version))) {
-            kfd->info.env.vid = i;
-            print_u64(kfd->info.env.vid);
-            return;
-        }
-    }
-    
-    if (@available(iOS 15.0, *)) {
-        if (@available(iOS 15.4, *)) {
-            kfd->info.env.vid = 6;
-        }
-        else if (@available(iOS 15.2, *)) {
-            kfd->info.env.vid = 4;
-        }
-        else {
-            kfd->info.env.vid = 2;
-        }
-        int ptrAuthVal = 0;
-        size_t len = sizeof(ptrAuthVal);
-        assert(sysctlbyname("hw.optional.arm.FEAT_PAuth", &ptrAuthVal, &len, NULL, 0) != -1);
-        // ^ This seems to fail on iOS 14, luckily there are no differences in offsets between arm64 and arm64e there
-        if (ptrAuthVal != 0) {
-            kfd->info.env.vid++;
-        }
-        return;
-    }
-    else if (@available(iOS 14.5, *)) {
-        kfd->info.env.vid = 1;
-        return;
-    }
-    else if (@available(iOS 14.0, *)) {
-        kfd->info.env.vid = 0;
-        return;
-    }
-
-    assert_false("unsupported osversion");
 }
 
 void info_run(struct kfd* kfd)
@@ -195,8 +152,8 @@ void info_run(struct kfd* kfd)
 
 void info_free(struct kfd* kfd)
 {
-    assert_mach(vm_deallocate(mach_task_self(), kfd->info.copy.src_uaddr, kfd->info.copy.size));
-    assert_mach(vm_deallocate(mach_task_self(), kfd->info.copy.dst_uaddr, kfd->info.copy.size));
+    if(kfd->info.copy.src_uaddr) assert_mach(vm_deallocate(mach_task_self(), kfd->info.copy.src_uaddr, kfd->info.copy.size));
+    if(kfd->info.copy.dst_uaddr) assert_mach(vm_deallocate(mach_task_self(), kfd->info.copy.dst_uaddr, kfd->info.copy.size));
 }
 
 #endif /* info_h */

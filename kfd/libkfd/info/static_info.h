@@ -6,20 +6,12 @@
 #define static_info_h
 
 /*
- * makedefs/MakeInc.def
- */
-
-#define ARM64_LINK_ADDR    0xfffffff007004000
-
-/*
  * osfmk/arm64/proc_reg.h
  */
 
 #define ARM_PGSHIFT    (14ull)
 #define ARM_PGBYTES    (1ull << ARM_PGSHIFT)
 #define ARM_PGMASK     (ARM_PGBYTES - 1ull)
-
-#define T1SZ_BOOT    17ull
 
 #define AP_RWNA    (0x0ull << 6)
 #define AP_RWRW    (0x1ull << 6)
@@ -62,7 +54,6 @@
 #define ARM_16K_TT_L1_SIZE          0x0000001000000000ull
 #define ARM_16K_TT_L1_OFFMASK       0x0000000fffffffffull
 #define ARM_16K_TT_L1_SHIFT         36
-#define ARM_16K_TT_L1_INDEX_MASK    0x00007ff000000000ull
 
 #define ARM_16K_TT_L2_SIZE          0x0000000002000000ull
 #define ARM_16K_TT_L2_OFFMASK       0x0000000001ffffffull
@@ -193,59 +184,6 @@ struct vm_map_entry {
         vme_kernel_object:1;
     u16 wired_count;
     u16 user_wired_count;
-};
-
-struct _vm_map {
-    u64 lock[2];
-    struct vm_map_header hdr;
-    u64 pmap;
-    u64 size;
-    u64 size_limit;
-    u64 data_limit;
-    u64 user_wire_limit;
-    u64 user_wire_size;
-#if TARGET_MACOS
-    u64 vmmap_high_start;
-#else /* TARGET_MACOS */
-    u64 user_range[4];
-#endif /* TARGET_MACOS */
-    union {
-        u64 vmu1_highest_entry_end;
-        u64 vmu1_lowest_unnestable_start;
-    } vmu1;
-    u64 hint;
-    union {
-        u64 vmmap_hole_hint;
-        u64 vmmap_corpse_footprint;
-    } vmmap_u_1;
-    union {
-        u64 _first_free;
-        u64 _holes;
-    } f_s;
-    u32 map_refcnt;
-    u32
-        wait_for_space:1,
-        wiring_required:1,
-        no_zero_fill:1,
-        mapped_in_other_pmaps:1,
-        switch_protect:1,
-        disable_vmentry_reuse:1,
-        map_disallow_data_exec:1,
-        holelistenabled:1,
-        is_nested_map:1,
-        map_disallow_new_exec:1,
-        jit_entry_exists:1,
-        has_corpse_footprint:1,
-        terminated:1,
-        is_alien:1,
-        cs_enforcement:1,
-        cs_debugged:1,
-        reserved_regions:1,
-        single_jit:1,
-        never_faults:1,
-        uses_user_ranges:1,
-        pad:12;
-    u32 timestamp;
 };
 
 /*
