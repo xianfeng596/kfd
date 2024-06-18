@@ -62,7 +62,7 @@ struct ContentView: View {
                             puaf_pages = 0
                             kfd = 0
                         }.disabled(kfd == 0).frame(minWidth: 0, maxWidth: .infinity)
-                    }.buttonStyle(.bordered)
+                    }
                 }.listRowBackground(Color.clear)
                 if kfd != 0 {
                     Section {
