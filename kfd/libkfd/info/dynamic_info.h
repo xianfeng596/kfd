@@ -57,33 +57,36 @@ struct dynamic_info {
     u64 device__ARM_TT_L1_INDEX_MASK;
 };
 
-const struct dynamic_info kern_versions[] = {
-    // iOS 15.7.6 - iPhone 6s
-    {
-        .kread_kqueue_workloop_ctl_supported = false,
+const struct dynamic_info dynamic_system_info = {
+        .kread_kqueue_workloop_ctl_supported = true,
         .krkw_iosurface_supported = true,
         .perf_supported = true,
         .kernelcache__static_base = 0xfffffff007004000,
         .proc__p_list__le_prev = 0x0008,
+        .proc__task = 0x10,
         .proc__p_pid = 0x0068,
-        .proc__p_fd__fd_ofiles = 0x00d8,
+        .proc__p_fd__fd_ofiles = 0x00f8,
         .proc__object_size = 0x04b0,
         .task__map = 0x0028,
-        .vm_map__hdr_links_prev = 0x0010,
-        .vm_map__hdr_links_next = 0x0008,
-        .vm_map__min_offset = 0x0010,
-        .vm_map__max_offset = 0x0018,
-        .vm_map__hdr_nentries = 0x0010,
-        .vm_map__hdr_nentries_u64 = 0x0010,
-        .vm_map__hdr_rb_head_store_rbh_root = 0x0010,
-        .vm_map__pmap = 0x0040,
-        .thread__thread_id = 0,
+        .vm_map__hdr_links_prev = 0x10,
+        .vm_map__hdr_links_next = 0x18,
+        .vm_map__min_offset = 0x20,
+        .vm_map__max_offset = 0x28,
+        .vm_map__hdr_nentries = 0x30,
+        .vm_map__hdr_nentries_u64 = 0x30,
+        .vm_map__hdr_rb_head_store_rbh_root = 0x38,
+        .vm_map__pmap = 0x40,
+        .vm_map__hint = 0x78,
+        .vm_map__hole_hint = 0x80,
+        .vm_map__holes_list = 0x88,
+        .vm_map__object_size = 0xa0,
         .IOSurface__isa = 0x0,
         .IOSurface__pixelFormat = 0xa4,
         .IOSurface__allocSize = 0xac,
         .IOSurface__useCountPtr = 0xc0,
         .IOSurface__indexedTimestampPtr = 0x360,
         .IOSurface__readDisplacement = 0x14,
+        .thread__thread_id = 0,
         .kernelcache__allproc = 0xfffffff007856188,
         .kernelcache__cdevsw = 0xfffffff0077fdeb8,
         .kernelcache__gPhysBase = 0xfffffff007116740,
@@ -94,12 +97,8 @@ const struct dynamic_info kern_versions[] = {
         .kernelcache__ptov_table = 0xfffffff0070cb590,
         .kernelcache__vn_kqfilter = 0xfffffff007341bb8,
         .device__T1SZ_BOOT = 0x0019,
-        .device__ARM_TT_L1_INDEX_MASK = 0x0000007000000000,
-    },
+        .device__ARM_TT_L1_INDEX_MASK = 0x0070,
+
 };
-
-struct dynamic_info dynamic_system_info = { 0 };
-
-#define ARM64_LINK_ADDR dynamic_info(kernelcache__static_base)
 
 #endif /* dynamic_info_h */

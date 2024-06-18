@@ -6,12 +6,21 @@
 #define static_info_h
 
 /*
+ * makedefs/MakeInc.def
+ */
+
+#define ARM64_LINK_ADDR    0xfffffff007004000
+
+/*
  * osfmk/arm64/proc_reg.h
  */
 
 #define ARM_PGSHIFT    (14ull)
 #define ARM_PGBYTES    (1ull << ARM_PGSHIFT)
 #define ARM_PGMASK     (ARM_PGBYTES - 1ull)
+
+//#define T1SZ_BOOT    17ull
+#define T1SZ_BOOT    25ull
 
 #define AP_RWNA    (0x0ull << 6)
 #define AP_RWRW    (0x1ull << 6)
@@ -54,6 +63,8 @@
 #define ARM_16K_TT_L1_SIZE          0x0000001000000000ull
 #define ARM_16K_TT_L1_OFFMASK       0x0000000fffffffffull
 #define ARM_16K_TT_L1_SHIFT         36
+//#define ARM_16K_TT_L1_INDEX_MASK    0x00007ff000000000ull
+#define ARM_16K_TT_L1_INDEX_MASK    0x0000007000000000ull
 
 #define ARM_16K_TT_L2_SIZE          0x0000000002000000ull
 #define ARM_16K_TT_L2_OFFMASK       0x0000000001ffffffull
