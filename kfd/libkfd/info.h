@@ -86,6 +86,23 @@ void info_init(struct kfd* kfd)
 
     struct rlimit rlim = { .rlim_cur = kfd->info.env.maxfilesperproc, .rlim_max = kfd->info.env.maxfilesperproc };
     assert_bsd(setrlimit(RLIMIT_NOFILE, &rlim));
+
+    char kern_version[512] = {};
+    usize size2 = sizeof(kern_version);
+    assert_bsd(sysctlbyname("kern.version", &kern_version, &size2, NULL, 0));
+    print_string(kern_version);
+
+    const u64 number_of_kern_versions = sizeof(kern_versions) / sizeof(kern_versions[0]);
+    for (u64 i = 0; i < number_of_kern_versions; i++) {
+        const char* current_kern_version = kern_versions[i].kern_version;
+        if (!memcmp(kern_version, current_kern_version, strlen(current_kern_version))) {
+            kfd->info.env.vid = i;
+            print_u64(kfd->info.env.vid);
+            return;
+        }
+    }
+
+    assert_false("unsupported osversion");
 }
 
 void info_run(struct kfd* kfd)
