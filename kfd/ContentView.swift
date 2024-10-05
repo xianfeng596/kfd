@@ -8,17 +8,17 @@ struct ContentView: View {
     @State private var kfd: UInt64 = 0
 
     private var puaf_pages_options = [16, 32, 64, 128, 256, 512, 1024, 2048]
-    @State private var puaf_pages_index = 7
+    @State private var puaf_pages_index = 3
     @State private var puaf_pages = 0
 
     private var puaf_method_options = ["physpuppet", "smith", "landa"]
     @State private var puaf_method = 2
 
-    private var kread_method_options = ["kqueue_workloop_ctl", "sem_open"]
-    @State private var kread_method = 1
+    private var kread_method_options = ["kqueue_workloop_ctl", "sem_open", "IOSurface"]
+    @State private var kread_method = 2
 
-    private var kwrite_method_options = ["dup", "sem_open"]
-    @State private var kwrite_method = 1
+    private var kwrite_method_options = ["dup", "sem_open", "IOSurface"]
+    @State private var kwrite_method = 2
 
     var body: some View {
         NavigationView {
