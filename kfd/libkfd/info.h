@@ -11,7 +11,7 @@
 /*
  * Note that these macros assume that the kfd pointer is in scope.
  */
-#define dynamic_info(field_name)    (kern_versions[].field_name)
+#define dynamic_info(field_name)    (kern_versions[kfd->info.env.vid].field_name)
 #define T1SZ_BOOT dynamic_info(device__T1SZ_BOOT)
 #define ARM_16K_TT_L1_INDEX_MASK dynamic_info(device__ARM_TT_L1_INDEX_MASK)
 
