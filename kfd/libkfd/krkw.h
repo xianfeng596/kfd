@@ -72,11 +72,11 @@ void krkw_helper_free(struct kfd* kfd, struct krkw* krkw);
 
 void krkw_init(struct kfd* kfd, u64 kread_method, u64 kwrite_method)
 {
-    if (!dynamic_system_info.kread_kqueue_workloop_ctl_supported) {
+    if (!kern_versions[kfd->info.env.vid].kread_kqueue_workloop_ctl_supported) {
         assert(kread_method != kread_kqueue_workloop_ctl);
     }
     
-    if (!dynamic_system_info.krkw_iosurface_supported) {
+    if (!kern_versions[kfd->info.env.vid].krkw_iosurface_supported) {
         assert(kread_method != kread_IOSurface);
         assert(kwrite_method != kwrite_IOSurface);
     }
