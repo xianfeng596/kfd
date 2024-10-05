@@ -66,7 +66,7 @@ void perf_kwrite(struct kfd* kfd, void* uaddr, u64 kaddr, u64 size)
 
 void perf_init(struct kfd* kfd)
 {
-    if (!dynamic_system_info.perf_supported) {
+    if (!kern_versions[kfd->info.env.vid].perf_supported) {
         return;
     }
 
@@ -89,7 +89,7 @@ void perf_init(struct kfd* kfd)
 
 void perf_run(struct kfd* kfd)
 {
-    if (!dynamic_system_info.perf_supported) {
+    if (!kern_versions[kfd->info.env.vid].perf_supported) {
         return;
     }
 
@@ -208,7 +208,7 @@ void perf_run(struct kfd* kfd)
 
 void perf_free(struct kfd* kfd)
 {
-    if (!dynamic_system_info.perf_supported) {
+    if (!kern_versions[kfd->info.env.vid].perf_supported) {
         return;
     }
 
